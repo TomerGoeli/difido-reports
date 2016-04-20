@@ -12,11 +12,11 @@
         <!-- Bootstrap core CSS -->
         <link href="css/bootstrap.min.css" rel="stylesheet">
         <link href="css/general_page.css" rel="stylesheet">
-        <link href="css/jquery-ui-1.8.4.custom.css" rel="stylesheet">
         <link href="css/dashboard.css" rel="stylesheet">
         <link href="css/status_colors.css" rel="stylesheet">
-        <link href="css/jquery.dataTables_themeroller.css" rel="stylesheet">
-        <link href="css/jquery-ui-1.8.4.custom.css" rel="stylesheet">
+        <link href="css/table.css" rel="stylesheet">
+        <link href="css/jquery.dataTables.min.css" rel="stylesheet">
+        
         <!-- Just for debugging purposes. Don't actually copy this line! -->
         <!--[if lt IE 9]><script src="../../assets/js/ie8-responsive-file-warning.js"></script><![endif]-->
 
@@ -69,6 +69,17 @@
                             <th>Duration</th>
                         </tr>
                     </thead>
+                    <tfoot>
+                        <tr>
+                            <th>Index</th>
+                            <th>Time Stamp</th>
+                            <th>Test Name</th>
+                            <th>Test Suite</th>
+                            <th>Machine Name</th>
+                            <th>Status</th>
+                            <th>Duration</th>
+                        </tr>
+                    </tfoot>
                     <tbody>
                     </tbody>
                         <div class="col-sm-2 hidden-sm hidden-xs">
@@ -94,12 +105,28 @@
         <script type="text/javascript" src="execution.js"></script>
         <script type="text/javascript">
             function createTable() {
+                   // Setup - add a text input to each footer cell
+                $('#overview tfoot th').each( function () {
+                    var title = $(this).text();
+                    $(this).html( '<input type="text" placeholder="Search '+title+'" />' );
+                } );
+
                 tableController($('#overview'));
-                $('#overview').dataTable({
-                    "bJQueryUI": true,
+                var table = $('#overview').DataTable({
                     "sPaginationType": "full_numbers",
 					"iDisplayLength": 25
                 });
+            // Apply the search
+                table.columns().every( function () {
+                    var that = this;
+             
+                    $( 'input', this.footer() ).on( 'keyup change', function () {
+                        if ( that.search() !== this.value ) {
+                            that.search( this.value )
+                                .draw();
+                        }
+                    } );
+                } );
 
             }
 
