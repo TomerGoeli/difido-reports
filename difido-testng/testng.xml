@@ -1,8 +1,14 @@
 <!DOCTYPE suite SYSTEM "http://testng.org/testng-1.0.dtd" >
 <suite name="Sanity Example" verbose="1">
-	<test name="Test Examples">
+	<test name="Report Examples">
 		<classes>
 			<class name="il.co.topq.difido.DifidoReporterTests" />
 		</classes>
 	</test>
+	<test name="Test Demo">
+		<classes>
+			<class name="il.co.topq.difido.ReportsTests" />
+		</classes>
+	</test>
+	
 </suite>

@@ -1,7 +1,5 @@
 package il.co.topq.difido;
 
-import il.co.topq.difido.model.Enums.Status;
-
 import java.awt.AWTException;
 import java.awt.Dimension;
 import java.awt.Rectangle;
@@ -13,13 +11,11 @@ import java.io.IOException;
 
 import javax.imageio.ImageIO;
 
-import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 
-@Listeners(il.co.topq.difido.ReportManagerHook.class)
-public class DifidoReporterTests {
+import il.co.topq.difido.model.Enums.Status;
 
-	ReportDispatcher report = ReportManager.getInstance();
+public class DifidoReporterTests extends AbstractDifidoTestCase {
 
 	@Test(description = "This is my custom description", groups = { "sanity", "regression" })
 	public void simpleReportCall0() {
@@ -32,7 +28,6 @@ public class DifidoReporterTests {
 		throw new Exception("This is my failure");
 	}
 
-	
 	@Test
 	public void testWithFailure() throws Exception {
 		report.log("About to fail");
@@ -43,9 +38,9 @@ public class DifidoReporterTests {
 	public void testWithError() throws Exception {
 		report.log("Message with error", "Error message", Status.error);
 	}
-	
+
 	@Test
-	public void testWithEncoding(){
+	public void testWithEncoding() {
 		report.log("Japanease Yen: \u00A5");
 	}
 
