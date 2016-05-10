@@ -9,12 +9,11 @@
     <meta name="author" content="">
     <title>Execution Tree</title>
     <!-- Bootstrap core CSS -->
-    <link href="https://ajax.googleapis.com/ajax/libs/jqueryui/1.9.2/themes/base/jquery.ui.all.css" rel="stylesheet" type="text/css" />
+    <link href="css/jquery.ui.resizable.css" rel="stylesheet" type="text/css" />
     <link href="css/bootstrap.min.css" rel="stylesheet">
     <link href="css/general_page.css" rel="stylesheet">
     <link href="css/test_page.css" rel="stylesheet">
     <link href="css/style.min.css" rel="stylesheet">
-    <!--<link href="css/testTree.css" rel="stylesheet">-->
     <link href="css/status_colors.css" rel="stylesheet">
     <link href="css/tree.css" rel="stylesheet">
     <link href="css/dashboard.css" rel="stylesheet">
@@ -25,24 +24,6 @@
           <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
           <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
         <![endif]-->
-    <style>
-    #leftpane {
-        box-sizing: content-box;
-        border: 0 !important;
-        border-right: 2px solid grey !important;
-        float: left;
-        width: 30%;
-    }
-    
-    #rightpane {
-        overflow: hidden;
-    }
-    
-    iframe {
-        display: block;
-        width: 100%;
-    }
-    </style>
 </head>
 
 <body>
@@ -90,9 +71,8 @@
     <!-- Bootstrap core JavaScript
         ================================================== -->
     <!-- Placed at the end of the document so the pages load faster -->
-    <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
-    <script src="http://ajax.googleapis.com/ajax/libs/jqueryui/1.9.2/jquery-ui.min.js"></script>
-    <!-- <script src="js/jquery.js"></script> -->
+    <script src="js/jquery.min.js"></script>
+    <script src="js/jquery-ui.min.js"></script>
     <script src="js/bootstrap.min.js"></script>
     <script src="js/jstree.min.js"></script>
     <script src="js/docs.min.js"></script>
@@ -102,7 +82,7 @@
     $(function() {
         $("#leftpane").resizable({
             minWidth: 250,
-            maxWidth: 550
+            maxWidth: 600
         });
     });
 
