@@ -30,9 +30,20 @@
         box-sizing: content-box;
         border: 0 !important;
         border-right: 5px solid grey !important;
+        float: left;
+        width: 30%;
     }
+    #rightpane {
+        overflow: hidden;
+    }
+    
     #bottomcontainer {
         /*width: 970px !important;*/
+    }
+
+    iframe {
+        display: block;
+        width: 100%;
     }
     </style>
 </head>
@@ -60,7 +71,7 @@
     </div>
     <div class="container-fluid" id="bottomcontainer">
         <div class="row">
-            <div id="leftpane" class="col-xs-3 ui-widget-content">
+            <div id="leftpane" class="ui-widget-content">
                 <div class="btn-group btn-group-sm" style="padding:10px ; ">
                     <button type="button" onclick="javascript:$('#tree').jstree('open_all')">Expand all</button>
                     <button type="button" onclick="javascript:$('#tree').jstree('close_all')">Collapse all</button>
@@ -71,11 +82,11 @@
                 <div id="tree">
                 </div>
             </div>
-            <div id="rightpane" class="col-xs-9">
+            <div id="rightpane">
                 <div class="panel-heading">
                     <h3>Test Information</h3></div>
                 <div class="panel-body">
-                    <iframe id="testframe" class="col-xs-12">
+                    <iframe id="testframe">
                     </iframe>
                 </div>
             </div>
