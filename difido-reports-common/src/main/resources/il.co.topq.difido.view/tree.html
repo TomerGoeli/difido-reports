@@ -29,18 +29,15 @@
     #leftpane {
         box-sizing: content-box;
         border: 0 !important;
-        border-right: 5px solid grey !important;
+        border-right: 2px solid grey !important;
         float: left;
         width: 30%;
     }
+    
     #rightpane {
         overflow: hidden;
     }
     
-    #bottomcontainer {
-        /*width: 970px !important;*/
-    }
-
     iframe {
         display: block;
         width: 100%;
@@ -50,7 +47,7 @@
 
 <body>
     <div class="navbar navbar-inverse navbar-fixed-top" role="navigation">
-        <div class="container-fluid" id="topcontainter">
+        <div class="container-fluid">
             <div class="navbar-header">
                 <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
                     <span class="sr-only">Toggle navigation</span>
@@ -64,31 +61,29 @@
                 <ul class="nav navbar-nav navbar-right">
                     <li><a href="index.html">Dashboard</a></li>
                     <li><a href="#">Execution Tree</a></li>
-                    <li><a href="table.html">Execution teTable</a></li>
+                    <li><a href="table.html">Execution Table</a></li>
                 </ul>
             </div>
         </div>
     </div>
-    <div class="container-fluid" id="bottomcontainer">
-        <div class="row">
-            <div id="leftpane" class="ui-widget-content">
-                <div class="btn-group btn-group-sm" style="padding:10px ; ">
-                    <button type="button" onclick="javascript:$('#tree').jstree('open_all')">Expand all</button>
-                    <button type="button" onclick="javascript:$('#tree').jstree('close_all')">Collapse all</button>
-                </div>
-                <div class="input-group" style="padding:10px">
-                    <input id="tree_q" type="text" class="form-control">
-                </div>
-                <div id="tree">
-                </div>
+    <div>
+        <div id="leftpane" class="ui-widget-content">
+            <div class="btn-group btn-group-sm" style="padding:10px ; ">
+                <button type="button" onclick="javascript:$('#tree').jstree('open_all')">Expand all</button>
+                <button type="button" onclick="javascript:$('#tree').jstree('close_all')">Collapse all</button>
             </div>
-            <div id="rightpane">
-                <div class="panel-heading">
-                    <h3>Test Information</h3></div>
-                <div class="panel-body">
-                    <iframe id="testframe">
-                    </iframe>
-                </div>
+            <div class="input-group" style="padding:10px">
+                <input id="tree_q" type="text" class="form-control">
+            </div>
+            <div id="tree">
+            </div>
+        </div>
+        <div id="rightpane">
+            <div class="panel-heading">
+                <h3>Test Information</h3></div>
+            <div class="panel-body">
+                <iframe id="testframe">
+                </iframe>
             </div>
         </div>
     </div>
