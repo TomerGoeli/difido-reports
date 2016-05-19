@@ -9,6 +9,7 @@ import org.elasticsearch.client.Requests;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.node.Node;
 import org.elasticsearch.node.NodeBuilder;
+import org.junit.Assert;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.SpringApplication;
@@ -18,6 +19,7 @@ import org.springframework.boot.context.web.SpringBootServletInitializer;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
 import il.co.topq.report.Configuration.ConfigProps;
+import il.co.topq.report.plugins.mail.MailEnhancer;
 
 @SpringBootApplication
 @EnableScheduling
@@ -35,11 +37,28 @@ public class Application extends SpringBootServletInitializer {
 	}
 
 	public static void main(String[] args) {
+		loadDynamically();
 		startElastic();
 		configureReportsIndex();
 		SpringApplication.run(Application.class, args);
 		// stopElastic();
 	}
+
+	private static void loadDynamically(){
+		try {
+			Class classToLoad = Class.forName("il.co.topq.report.MyMailEnhancer", true, ClassLoader.getSystemClassLoader());
+			Object o = classToLoad.newInstance();
+			Assert.assertNotNull(o);
+			MailEnhancer enhancer = (MailEnhancer)o;
+			enhancer.render(null);
+			logger.info("********************** SUCCESS *************************");
+			
+		} catch (ClassNotFoundException | InstantiationException | IllegalAccessException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+
 
 	private static void configureReportsIndex() {
 		final IndicesExistsResponse res = Common.elasticsearchClient.admin().indices()
