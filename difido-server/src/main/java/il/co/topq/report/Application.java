@@ -19,7 +19,7 @@ import org.springframework.boot.context.web.SpringBootServletInitializer;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
 import il.co.topq.report.Configuration.ConfigProps;
-import il.co.topq.report.plugins.mail.MailEnhancer;
+import il.co.topq.report.addons.MailEnhancerAddon;
 
 @SpringBootApplication
 @EnableScheduling
@@ -50,7 +50,7 @@ public class Application extends SpringBootServletInitializer {
 					Application.class.getClassLoader());
 			Object o = classToLoad.newInstance();
 			Assert.assertNotNull(o);
-			MailEnhancer enhancer = (MailEnhancer) o;
+			MailEnhancerAddon enhancer = (MailEnhancerAddon) o;
 			String result = enhancer.render(null);
 			logger.info("********************** SUCCESS:" + result + " *************************");
 
