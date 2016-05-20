@@ -36,7 +36,7 @@ public class Application extends SpringBootServletInitializer {
 		return application.sources(Application.class);
 	}
 
-	public static void main(String[] args) {
+	public static void main(String[] args) throws Exception {
 		loadDynamically();
 		startElastic();
 		configureReportsIndex();
@@ -44,21 +44,22 @@ public class Application extends SpringBootServletInitializer {
 		// stopElastic();
 	}
 
-	private static void loadDynamically(){
+	private static void loadDynamically() throws Exception {
 		try {
-			Class classToLoad = Class.forName("il.co.topq.report.MyMailEnhancer", true, ClassLoader.getSystemClassLoader());
+			Class classToLoad = Class.forName("il.co.topq.report.MyMailEnhancer", true,
+					Application.class.getClassLoader());
 			Object o = classToLoad.newInstance();
 			Assert.assertNotNull(o);
-			MailEnhancer enhancer = (MailEnhancer)o;
-			enhancer.render(null);
-			logger.info("********************** SUCCESS *************************");
-			
+			MailEnhancer enhancer = (MailEnhancer) o;
+			String result = enhancer.render(null);
+			logger.info("********************** SUCCESS:" + result + " *************************");
+
 		} catch (ClassNotFoundException | InstantiationException | IllegalAccessException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
+			throw e;
 		}
 	}
-
 
 	private static void configureReportsIndex() {
 		final IndicesExistsResponse res = Common.elasticsearchClient.admin().indices()
