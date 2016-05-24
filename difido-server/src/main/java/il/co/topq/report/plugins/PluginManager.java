@@ -25,21 +25,21 @@ public class PluginManager {
 	private List<Class<? extends Plugin>> pluginClassList;
 
 	public PluginManager() {
-		final String addonClasses = Configuration.INSTANCE.readString(ConfigProps.PLUGIN_CLASSES);
-		if (null == addonClasses || addonClasses.isEmpty()) {
+		final String pluginClasses = Configuration.INSTANCE.readString(ConfigProps.PLUGIN_CLASSES);
+		if (null == pluginClasses || pluginClasses.isEmpty()) {
 			log.info("No Plugins were found, plugin manager will be disabled");
 			enabled = false;
 			return;
 		}
 		pluginClassList = new ArrayList<Class<? extends Plugin>>();
-		for (String addonClassName : addonClasses.split(";")) {
+		for (String pluginClassName : pluginClasses.split(";")) {
 			try {
 				@SuppressWarnings("unchecked")
-				Class<? extends Plugin> pluginClass = (Class<? extends Plugin>) Class.forName(addonClassName, true,
+				Class<? extends Plugin> pluginClass = (Class<? extends Plugin>) Class.forName(pluginClassName, true,
 						PluginManager.class.getClassLoader());
 				pluginClassList.add(pluginClass);
 			} catch (Exception e) {
-				log.error("Failed to load plugin class " + addonClassName + " due to " + e.getMessage());
+				log.error("Failed to load plugin class " + pluginClassName + " due to " + e.getMessage());
 			}
 		}
 	}
