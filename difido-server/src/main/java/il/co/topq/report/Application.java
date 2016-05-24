@@ -9,7 +9,6 @@ import org.elasticsearch.client.Requests;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.node.Node;
 import org.elasticsearch.node.NodeBuilder;
-import org.junit.Assert;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.SpringApplication;
@@ -19,7 +18,6 @@ import org.springframework.boot.context.web.SpringBootServletInitializer;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
 import il.co.topq.report.Configuration.ConfigProps;
-import il.co.topq.report.addons.MailEnhancerAddon;
 
 @SpringBootApplication
 @EnableScheduling
@@ -37,28 +35,10 @@ public class Application extends SpringBootServletInitializer {
 	}
 
 	public static void main(String[] args) throws Exception {
-		loadDynamically();
 		startElastic();
 		configureReportsIndex();
 		SpringApplication.run(Application.class, args);
 		// stopElastic();
-	}
-
-	private static void loadDynamically() throws Exception {
-		try {
-			Class classToLoad = Class.forName("il.co.topq.report.MyMailEnhancer", true,
-					Application.class.getClassLoader());
-			Object o = classToLoad.newInstance();
-			Assert.assertNotNull(o);
-			MailEnhancerAddon enhancer = (MailEnhancerAddon) o;
-			String result = enhancer.render(null);
-			logger.info("********************** SUCCESS:" + result + " *************************");
-
-		} catch (ClassNotFoundException | InstantiationException | IllegalAccessException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-			throw e;
-		}
 	}
 
 	private static void configureReportsIndex() {
