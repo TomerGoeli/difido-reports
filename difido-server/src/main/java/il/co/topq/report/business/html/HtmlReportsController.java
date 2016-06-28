@@ -1,11 +1,9 @@
 package il.co.topq.report.business.html;
 
-import static java.nio.file.StandardCopyOption.*;
 import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.nio.file.Files;
 
 import org.apache.commons.io.FileUtils;
 import org.slf4j.Logger;
@@ -152,23 +150,11 @@ public class HtmlReportsController {
 
 	private void writeTestDetails(TestDetails details, ExecutionMetadata executionMetadata) {
 		synchronized (testFileLockObject) {
-			// We are using temp file because we want to avoid a situation that
-			// happens under heavy load that the client receives the json file
-			// when it is not completed.
 			final File executionDestinationFolder = getExecutionDestinationFolder(executionMetadata);
-			final File tempFile = new File(executionDestinationFolder,
-					"tests" + File.separator + "test_" + details.getUid() + "_temp");
-			final File finalFile = new File(executionDestinationFolder,
-					"tests" + File.separator + "test_" + details.getUid());
-			PersistenceUtils.writeTest(details, executionDestinationFolder, tempFile);
-			try {
-				Files.move(tempFile.toPath(), finalFile.toPath(), REPLACE_EXISTING);
-			} catch (IOException e) {
-				log.error("Failed copying test details file " + tempFile.getAbsolutePath() + " in execution "
-						+ executionMetadata.getId());
-			} finally {
-				tempFile.delete();
-			}
+			log.trace("About to write test details for execution " + executionMetadata.getId());
+			PersistenceUtils.writeTest(details, executionDestinationFolder,
+					new File(executionDestinationFolder, "tests" + File.separator + "test_" + details.getUid()));
+			log.trace("Finished writing test details for execution " + executionMetadata.getId());
 		}
 	}
 
@@ -184,8 +170,7 @@ public class HtmlReportsController {
 				stream.write(fileAddedToTestEvent.getFileContent());
 			}
 		} catch (IOException e) {
-			log.warn("Failed to save file with name " + fileAddedToTestEvent.getFileName() + " due to "
-					+ e.getMessage());
+			log.warn("Failed to save file with name " + fileAddedToTestEvent.getFileName() + " due to " + e.getMessage());
 		}
 	}
 
