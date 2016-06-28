@@ -38,6 +38,8 @@ difido-server/config/difido_config.properties
 difido-server/log
 difido-server/htmlTemplate
 difido-testng/remoteDifido.properties
-examples/testng-example/remoteDifido.properties
+examples/jsystem-example/tests-project/difido.properties
+examples/jsystem-example/tests-project/remoteDifido.properties
+examples/jsystem-example/tests-project/jsystem0.log.lck
 !difido-nunit/difido-client/Resources/difido-reports-common.jar
 !server.log
