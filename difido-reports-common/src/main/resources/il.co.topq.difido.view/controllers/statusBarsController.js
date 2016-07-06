@@ -66,9 +66,15 @@ function statusBarsController(bars){
     }
 
     var totalPlanned = getAllPlannedTests();
-    $(".totalExecuted").animate({
-        width: calculatePercent(totalExecuted, totalPlanned)
-    },100).text(totalExecuted + " of " + totalPlanned);
+    if (totalPlanned != 0) {
+        $(".totalExecuted").removeClass("hidden");
+        $(".totalExecuted").animate({
+            width: calculatePercent(totalExecuted, totalPlanned)
+        },100).text(totalExecuted + " of " + totalPlanned);
+        
+    } else {
+        $(".totalExecuted").hide();
+    }
     $(".success").animate({
         width: calculatePercent(success,totalExecuted)
     },100).text(renderPercentageText(success,totalExecuted));
