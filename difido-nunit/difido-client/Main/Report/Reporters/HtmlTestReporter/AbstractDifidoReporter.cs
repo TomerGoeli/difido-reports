@@ -8,6 +8,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Web.Script.Serialization;
+using System.Diagnostics;
 
 namespace difido_client.Main.Report.Reporters.HtmlTestReporter
 {
@@ -19,6 +20,7 @@ namespace difido_client.Main.Report.Reporters.HtmlTestReporter
         private string executionUid;
         private TestDetails testDetails;
         private Machine machine;
+        private Stopwatch stopwatch;
 
         public virtual void Init(string outputFolder)
         {
@@ -27,8 +29,7 @@ namespace difido_client.Main.Report.Reporters.HtmlTestReporter
             execution = new Execution();
             execution.AddMachine(machine);
             MachineWasAdded(machine);
-
-
+            stopwatch = new Stopwatch();
         }
 
         private void GenerateUid()
@@ -36,11 +37,13 @@ namespace difido_client.Main.Report.Reporters.HtmlTestReporter
             executionUid = new Random().Next(0, 1000) + (DateTime.Now.Ticks / TimeSpan.TicksPerMinute).ToString();
         }
 
-        public void StartTest(ReporterTestInfo testInfo)
+        public virtual void StartTest(ReporterTestInfo testInfo)
         {
 
+            Console.WriteLine("In start test");
             currentTest = new Test(index, testInfo.TestName, executionUid + "-" + index);
             currentTest.timestamp = DateTime.Now.ToString("yyyy/MM/dd HH:mm:ss");
+            currentTest.className = testInfo.FullyQualifiedTestClassName;
             string scenarioName = testInfo.FullyQualifiedTestClassName.Split('.')[testInfo.FullyQualifiedTestClassName.Split('.').Length - 2];
             Scenario scenario;
             if (machine.IsChildWithNameExists(scenarioName))
@@ -57,21 +60,23 @@ namespace difido_client.Main.Report.Reporters.HtmlTestReporter
                     scenario.scenarioProperties = ((Scenario)machine.children[0]).scenarioProperties;
                 }
                 machine.AddChild(scenario);
+
             }
             scenario.AddChild(currentTest);
             ExecutionWasAddedOrUpdated(execution);
             testDetails = new TestDetails(testInfo.TestName, currentTest.uid);
             testDetails.description = testInfo.FullyQualifiedTestClassName;
             testDetails.timestamp = DateTime.Now.ToString("yyyy/MM/dd HH:mm:ss");
+            TestDetailsWereAdded(testDetails);
         }
 
-        public void EndTest(ReporterTestInfo testInfo)
+        public virtual void EndTest(ReporterTestInfo testInfo)
         {
-
+            TestDetailsWereAdded(testDetails);
             currentTest.status = testInfo.Status.ToString();
             currentTest.duration = testInfo.DurationTime;
             testDetails.duration = testInfo.DurationTime;
-            ExecutionWasAddedOrUpdated(execution);            
+            ExecutionWasAddedOrUpdated(execution);
             index++;
         }
 
@@ -104,7 +109,19 @@ namespace difido_client.Main.Report.Reporters.HtmlTestReporter
 
                 }
             }
-
+            // The stopwatch is an important mechanism that helps when test is creating a large number of message in short time intervals.
+            if (!stopwatch.IsRunning)
+            {
+                stopwatch.Start();
+            }
+            else
+            {
+                if (stopwatch.ElapsedMilliseconds <= 100)
+                {
+                    return;
+                }
+            }
+            stopwatch.Restart();
             TestDetailsWereAdded(testDetails);
         }
 
@@ -148,7 +165,7 @@ namespace difido_client.Main.Report.Reporters.HtmlTestReporter
 
         protected string ExecutionUid
         {
-            get {return executionUid;}
+            get { return executionUid; }
 
         }
 
@@ -161,4 +178,5 @@ namespace difido_client.Main.Report.Reporters.HtmlTestReporter
 
 
     }
+
 }

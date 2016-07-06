@@ -87,7 +87,6 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Main\Report\IReportDispatcher.cs" />
     <Compile Include="Main\Report\IReporter.cs" />
-    <Compile Include="Main\Report\Reporters\ExcelReport\ExcelReporter.cs" />
     <Compile Include="Main\Report\Reporters\HtmlTestReporter\HtmlTestReporter.cs" />
     <Compile Include="Main\Report\Reporters\HtmlTestReporter\Model\Enum.cs" />
     <Compile Include="Main\Report\Reporters\HtmlTestReporter\Model\Execution\Execution.cs" />
@@ -108,7 +107,6 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
-    <None Include="Resources\test_results.xlsx" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="Resources\difido-reports-common.jar" />
@@ -117,6 +115,7 @@
     <EmbeddedResource Include="Properties\Resources.resx">
       <Generator>ResXFileCodeGenerator</Generator>
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+      <SubType>Designer</SubType>
     </EmbeddedResource>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

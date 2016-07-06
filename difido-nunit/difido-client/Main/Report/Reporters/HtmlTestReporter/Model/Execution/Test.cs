@@ -12,6 +12,7 @@ namespace difido_client.Report.Html.Model
         public string uid { get; set; }
         public long duration { get; set; }
         public string timestamp { get; set; }
+        public string className { get; set; }
 
         public Test()
         {
@@ -19,13 +20,14 @@ namespace difido_client.Report.Html.Model
             status = "success";
         }
 
-        public Test(int index, string name, string uid) : base(name)
+        public Test(int index, string name, string uid)
+            : base(name)
         {
             this.index = index;
             this.uid = uid;
             type = "test";
             status = "success";
-            
+
         }
 
 
