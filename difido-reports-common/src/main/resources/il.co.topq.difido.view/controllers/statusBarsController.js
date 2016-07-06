@@ -65,16 +65,17 @@ function statusBarsController(bars){
         }
     }
 
-    var totalPlanned = getAllPlannedTests();
-    if (totalPlanned != 0) {
-        $(".totalExecuted").removeClass("hidden");
+    var totalPlanned = getAllPlannedTests();    
+    if (totalPlanned != 0 && totalExecuted <= totalPlanned) {
         $(".totalExecuted").animate({
             width: calculatePercent(totalExecuted, totalPlanned)
         },100).text(totalExecuted + " of " + totalPlanned);
         
     } else {
-        $(".totalExecuted").hide();
+    // There is a problem evaluating the number of planned tests
+        $(".totalExecuted").text(totalExecuted);
     }
+    
     $(".success").animate({
         width: calculatePercent(success,totalExecuted)
     },100).text(renderPercentageText(success,totalExecuted));
