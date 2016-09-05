@@ -57,7 +57,7 @@ public class PluginController {
 		List<ExecutionPlugin> executionPlugins = pluginManager.getPlugins(ExecutionPlugin.class);
 		for (ExecutionPlugin plugin : executionPlugins) {
 			try {
-				if (pluginName.equals(plugin.getName())) {
+				if (pluginName.trim().equals(plugin.getName().trim())) {
 					log.debug("Calling plugin " + plugin.getName());
 					plugin.execute(params);
 				}

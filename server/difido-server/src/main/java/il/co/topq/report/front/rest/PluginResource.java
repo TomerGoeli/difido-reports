@@ -3,6 +3,7 @@ package il.co.topq.report.front.rest;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
+import javax.ws.rs.QueryParam;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,14 +28,20 @@ public class PluginResource {
 	/**
 	 * Get list of all the reports
 	 * 
+	 * curl http://localhost:8080/api/plugins/simplePlugin?params=FOO
+	 * 
 	 * @param pluginName
 	 *            The name of the plugin to execute
-	 * @return
+	 * @param Free
+	 *            parameter string
+	 *            
+	 *            
 	 */
 	@GET
-	public void get(@PathParam("plugin") String pluginName, String params) {
-		log.debug("GET - Execute plugin " + pluginName + "(" + params + ")");
-		pluginController.executePlugin(pluginName, params);
+	@Path("{plugin}")
+	public void get(@PathParam("plugin") String plugin, @QueryParam("params") String params) {
+		log.debug("GET - Execute plugin " + plugin + "(" + params + ")");
+		pluginController.executePlugin(plugin, params);
 	}
 
 }

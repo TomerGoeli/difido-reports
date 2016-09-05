@@ -11,11 +11,5 @@ public interface ExecutionPlugin extends Plugin {
 	 */
 	void onExecutionEnded(ExecutionMetadata metadata);
 
-	/**
-	 * For manual execution
-	 * 
-	 * @param params
-	 */
-	void execute(String params);
 
 }
