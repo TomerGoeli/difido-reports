@@ -13,6 +13,7 @@ public interface Plugin {
 	 * For manual triggering
 	 * 
 	 * @param params
+	 *            Open string for any parameter that the plugin require
 	 */
 	void execute(String params);
 
