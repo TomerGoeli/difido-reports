@@ -2,12 +2,15 @@ package il.co.topq.difido.model.execution;
 
 import il.co.topq.difido.model.Enums.Status;
 
+import java.util.HashMap;
+import java.util.Map;
+
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 
-@JsonPropertyOrder({ "index", "uid", "duration", "timestamp", "className" })
+@JsonPropertyOrder({ "index", "uid","description", "duration", "timestamp", "className","parameters","properties" })
 @JsonIgnoreProperties(ignoreUnknown=true)
 public class TestNode extends Node {
 
@@ -17,6 +20,9 @@ public class TestNode extends Node {
 	@JsonProperty("uid")
 	private String uid;
 
+	@JsonProperty("description")
+	private String description = "";
+
 	@JsonProperty("duration")
 	private long duration;
 
@@ -25,6 +31,13 @@ public class TestNode extends Node {
 
 	@JsonProperty("className")
 	private String className;
+	
+	@JsonProperty("parameters")
+	private Map<String, String> parameters;
+
+	@JsonProperty("properties")
+	private Map<String, String> properties;
+
 
 	public TestNode() {
 		setStatus(Status.in_progress);
@@ -60,6 +73,23 @@ public class TestNode extends Node {
 		testNodeCopy.setTimestamp(aTestNode.getTimestamp());
 		return testNodeCopy;
 	}
+	
+	@JsonIgnore
+	public void addProperty(String key, String value) {
+		if (properties == null) {
+			properties = new HashMap<String, String>();
+		}
+		properties.put(key, value);
+	}
+
+	@JsonIgnore
+	public void addParameter(String key, String value) {
+		if (parameters == null) {
+			parameters = new HashMap<String, String>();
+		}
+		parameters.put(key, value);
+	}
+
 
 	@JsonIgnore
 	@Override
@@ -112,5 +142,30 @@ public class TestNode extends Node {
 	public void setClassName(String className) {
 		this.className = className;
 	}
+
+	public String getDescription() {
+		return description;
+	}
+
+	public void setDescription(String description) {
+		this.description = description;
+	}
+
+	public Map<String, String> getParameters() {
+		return parameters;
+	}
+
+	public void setParameters(Map<String, String> parameters) {
+		this.parameters = parameters;
+	}
+
+	public Map<String, String> getProperties() {
+		return properties;
+	}
+
+	public void setProperties(Map<String, String> properties) {
+		this.properties = properties;
+	}
+	
 
 }

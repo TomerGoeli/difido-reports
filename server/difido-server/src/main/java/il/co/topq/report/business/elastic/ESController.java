@@ -2,24 +2,18 @@ package il.co.topq.report.business.elastic;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.util.Collections;
+import java.util.ArrayList;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.TimeZone;
-import java.util.concurrent.CopyOnWriteArrayList;
 
-import org.elasticsearch.ElasticsearchException;
-import org.elasticsearch.action.delete.DeleteResponse;
-import org.elasticsearch.action.index.IndexResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-
+import il.co.topq.difido.model.execution.MachineNode;
+import il.co.topq.difido.model.execution.Node;
 import il.co.topq.difido.model.execution.ScenarioNode;
 import il.co.topq.difido.model.execution.TestNode;
 import il.co.topq.difido.model.test.TestDetails;
@@ -43,55 +37,16 @@ public class ESController {
 
 	private final Logger log = LoggerFactory.getLogger(ESController.class);
 
-	private volatile Map<Integer, List<ElasticsearchTest>> openTestsPerExecution;
-
 	// TODO: For testing. Of course that this should be handled differently.
 	// Probably using the application context.
 	public static boolean enabled = true;
 
-	public ESController() {
-		openTestsPerExecution = Collections.synchronizedMap(new HashMap<Integer, List<ElasticsearchTest>>());
-	}
-
 	@EventListener
 	public void onExecutionCreatedEvent(ExecutionCreatedEvent executionCreatedEvent) {
-		if (!enabled) {
-			return;
-		}
-		openTestsPerExecution.put(executionCreatedEvent.getExecutionId(),
-				new CopyOnWriteArrayList<ElasticsearchTest>());
 	}
 
 	@EventListener
 	public void onExecutionDeletedEvent(ExecutionDeletedEvent executionDeletedEvent) {
-		if (!enabled) {
-			return;
-		}
-
-		log.debug("About to delete all tests of execution " + executionDeletedEvent.getExecutionId()
-				+ " from the ElasticSearch");
-		// Delete by filter is not possible anymore so we do the deletion in two
-		// parts. First we get all the tests and then we delete it one by one
-		// using the id of each one.
-		List<ElasticsearchTest> testsToDelete = null;
-		try {
-			testsToDelete = ESUtils.getAllByTerm(Common.ELASTIC_INDEX, TEST_TYPE, ElasticsearchTest.class,
-					"executionId", String.valueOf(executionDeletedEvent.getExecutionId()));
-
-		} catch (Exception e) {
-			log.error("Failed to get tests to delete for execution " + executionDeletedEvent.getExecutionId(), e);
-			return;
-		}
-		log.debug("Found " + testsToDelete.size() + " tests to delete");
-		for (ElasticsearchTest test : testsToDelete) {
-			DeleteResponse response = ESUtils.delete(Common.ELASTIC_INDEX, TEST_TYPE, test.getUid());
-			if (!response.isFound()) {
-				log.warn("Test of execution " + executionDeletedEvent.getExecutionId() + " with id " + test.getUid()
-						+ " was not found for deletion");
-			}
-		}
-		log.debug("Finished deleting tests of execution " + executionDeletedEvent.getExecutionId()
-				+ " from the Elasticsearch");
 	}
 
 	@EventListener
@@ -99,8 +54,6 @@ public class ESController {
 		if (!enabled) {
 			return;
 		}
-
-		openTestsPerExecution.remove(executionEndedEvent.getExecutionId());
 	}
 
 	private String convertToUtc(final String dateInLocalTime) {
@@ -120,161 +73,72 @@ public class ESController {
 		if (!enabled) {
 			return;
 		}
-
-		// This method is called at the start of each test and at the end of
-		// each test. Now we need to get the correct test from the machine
-		if (openTestsPerExecution == null || openTestsPerExecution.get(machineCreatedEvent.getExecutionId()) == null
-				|| openTestsPerExecution.get(machineCreatedEvent.getExecutionId()).isEmpty()) {
-			return;
-		}
-		ElasticsearchTest testToRemove = null;
+		// Get all the current tests that are linked to the execution.
+		List<ElasticsearchTest> storedTests = null;
 		try {
-			for (ElasticsearchTest esTest : openTestsPerExecution.get(machineCreatedEvent.getExecutionId())) {
-				final TestNode testNode = machineCreatedEvent.getMachineNode().findTestNodeById(esTest.getUid());
-				if (testNode != null) {
-					testToRemove = esTest;
-					esTest.setStatus(testNode.getStatus().name());
-					esTest.setDuration(testNode.getDuration());
-					esTest.setMachine(machineCreatedEvent.getMachineNode().getName());
-					final ScenarioNode rootScenario = machineCreatedEvent.getMachineNode().getChildren()
-							.get(machineCreatedEvent.getMachineNode().getChildren().size() - 1);
-					if (machineCreatedEvent.getMachineNode().getChildren() != null
-							&& !machineCreatedEvent.getMachineNode().getChildren().isEmpty()) {
-						esTest.setExecution(rootScenario.getName());
-					}
-					if (rootScenario.getScenarioProperties() != null) {
-						esTest.setScenarioProperties(new HashMap<String, String>(rootScenario.getScenarioProperties()));
-					}
+			storedTests = getStoredTests(machineCreatedEvent);
+		} catch (Exception e) {
+			log.error("Failed to retrieve tests from Elastic due to " + e.getMessage());
+		}
+		final List<TestNode> executionTests = getExecutionTests(machineCreatedEvent.getMachineNode());
+		final List<TestNode> unstoredTests = findTestsThatAreNotStored(storedTests, executionTests);
+		final List<ElasticsearchTest> testsToStore = convertToElasticTests(unstoredTests);
 
-					// We are losing in the way the testNode parent, so we can't
-					// fully support the container properties as intended in
-					// JSystem. We will support only container properties that
-					// were added to the root scenario.
-					// @formatter:off
-					// ScenarioNode scenario;
-					// while (testNode.getParent() != null &&
-					// !(testNode.getParent() instanceof MachineNode)) {
-					// scenario = (ScenarioNode) testNode.getParent();
-					// if (scenario.getScenarioProperties() != null) {
-					// if (esTest.getExecutionProperties() == null) {
-					// esTest.setExecutionProperties(new HashMap<String,
-					// String>());
-					// }
-					// esTest.getExecutionProperties().putAll(scenario.getScenarioProperties());
-					// }
-					// }
-					// @formatter:off
+	}
 
-					if (testNode.getParent() != null) {
-						esTest.setParent(testNode.getParent().getName());
-					}
-					ESUtils.update(Common.ELASTIC_INDEX, TEST_TYPE, esTest.getUid(), esTest);
+	private List<ElasticsearchTest> convertToElasticTests(List<TestNode> unstoredTests) {
+		final List<ElasticsearchTest> testsToStore = new ArrayList<ElasticsearchTest>();
+		for (TestNode testNode : unstoredTests) {
+			testsToStore.add(testNodeToElasticTest(testNode));
+		}
+		return testsToStore;
+	}
+
+	private ElasticsearchTest testNodeToElasticTest(TestNode testNode) {
+//		ElasticsearchTest esTest = new ElasticsearchTest(testNode.getUid(), testNode.gete, timeStamp)
+		return null;
+	}
+
+	private List<TestNode> findTestsThatAreNotStored(List<ElasticsearchTest> storedTests,
+			List<TestNode> executionTests) {
+		List<TestNode> unstoredTests = new ArrayList<TestNode>();
+		for (TestNode testNode : executionTests) {
+			boolean found = false;
+			for (ElasticsearchTest executionTest : storedTests) {
+				if (executionTest.getUid() == testNode.getUid()) {
+					found = true;
+					continue;
 				}
 			}
-		} catch (Exception e) {
-			log.error("Failed updating resource", e);
-		} finally {
-			if (null == testToRemove) {
-				log.warn("Trying to remove test from the list but it was null. Test list status: "
-						+ openTestsPerExecution.get(machineCreatedEvent.getExecutionId()).toString());
-				return;
+			if (!found) {
+				unstoredTests.add(testNode);
 			}
-			log.debug("Removing test with UID " + testToRemove.getUid() + " from the test list");
-			openTestsPerExecution.get(machineCreatedEvent.getExecutionId()).remove(testToRemove);
+
 		}
+		return unstoredTests;
+	}
+
+	private List<TestNode> getExecutionTests(MachineNode machineNode) {
+		List<TestNode> executionTests = new ArrayList<TestNode>();
+		for (ScenarioNode rootScenario : machineNode.getAllScenarios()) {
+			for (Node child : rootScenario.getChildren(true)) {
+				if (child instanceof TestNode) {
+					executionTests.add((TestNode) child);
+				}
+			}
+
+		}
+		return executionTests;
+	}
+
+	private List<ElasticsearchTest> getStoredTests(MachineCreatedEvent machineCreatedEvent) throws Exception {
+		// TODO: We should accept tests that are in status 'in progress;
+		return ESUtils.getAllByQuery(Common.ELASTIC_INDEX, TEST_TYPE, ElasticsearchTest.class,
+				"executionId:" + machineCreatedEvent.getExecutionId());
 	}
 
 	@EventListener
 	public void OnTestDetailsCreatedEvent(TestDetailsCreatedEvent testDetailsCreatedEvent) {
-		
-		if (!enabled) {
-			return;
-		}
-		if (null == testDetailsCreatedEvent) {
-			log.warn("Recieved null 'testDetailsCreatedEvent'. Aborting");
-			return;
-		}
-		
-		if (null == testDetailsCreatedEvent.getTestDetails()) {
-			log.warn("Recieved null 'TestDetails'. Aborting");
-			return;
-		}
-		
-		if (null == testDetailsCreatedEvent.getTestDetails().getUid()) {
-			log.warn("Recieved null 'UID'. Aborting");
-			return;
-		}
-		
-		if (null == openTestsPerExecution){
-			return;
-		}
-		
-		final TestDetails testDetails = testDetailsCreatedEvent.getTestDetails();
-		final int executionId = testDetailsCreatedEvent.getExecutionId();
-		
-		final List<ElasticsearchTest> executionOpenTests = openTestsPerExecution.get(executionId);
-		if (null == executionOpenTests){
-			log.warn("There are no open tests for execution with id " + executionId);
-			return;
-		}
-	
-		for (ElasticsearchTest elasticTest : executionOpenTests) {
-			if (null == elasticTest) {
-				continue;
-			}
-			if (elasticTest.getUid().trim().equals(testDetails.getUid().trim())) {
-				// We already updated the test, so most of the data is already
-				// in the ES. The only data that is interesting and maybe was
-				// updated is the test properties, so we are going to check it.
-				if (testDetails.getProperties() != null) {
-					if (elasticTest.getProperties() == null
-							|| elasticTest.getProperties().size() != testDetails.getProperties().size()) {
-						elasticTest.setProperties(testDetailsCreatedEvent.getTestDetails().getProperties());
-						try {
-							ESUtils.update(Common.ELASTIC_INDEX, TEST_TYPE, elasticTest.getUid(), elasticTest);
-						} catch (ElasticsearchException | JsonProcessingException e) {
-							log.error("Failed updating test details in the Elasticsearch", e);
-						}
-					}
-				}
-				return;
-			}
-		}
-
-		if (ESUtils.isExist(Common.ELASTIC_INDEX, "test", testDetails.getUid())) {
-			log.warn("Test with uid " + testDetails.getUid() + " already exists in the Elasticsearch");
-			return;
-		}
-		String timestamp = null;
-		if (testDetails.getTimeStamp() != null) {
-			timestamp = testDetails.getTimeStamp().replaceFirst(" at ", " ");
-		} else {
-			timestamp = Common.ELASTIC_SEARCH_TIMESTAMP_STRING_FORMATTER.format(new Date());
-		}
-		String executionTimestamp = convertToUtc(testDetailsCreatedEvent.getMetadata().getTimestamp());
-		final ElasticsearchTest esTest = new ElasticsearchTest(testDetails.getUid(), executionTimestamp,
-				convertToUtc(timestamp));
-		esTest.setName(testDetails.getName());
-		esTest.setDuration(0);
-		esTest.setStatus("In progress");
-		esTest.setExecutionId(executionId);
-		esTest.setProperties(testDetails.getProperties());
-		esTest.setUrl(findTestUrl(testDetailsCreatedEvent.getMetadata(), testDetails));
-		esTest.setDescription(testDetails.getDescription());
-		esTest.setParameters(testDetails.getParameters());
-		log.debug("Adding test with UID " + esTest.getUid() + " to the test list");
-		executionOpenTests.add(esTest);
-		IndexResponse indexResponse = null;
-		try {
-			indexResponse = ESUtils.add(Common.ELASTIC_INDEX, "test", esTest.getUid(), esTest);
-		} catch (Throwable t) {
-			log.error("Failed adding test with UID " + esTest.getUid(), t);
-			return;
-
-		}
-		if (indexResponse == null || !indexResponse.isCreated()) {
-			log.warn("Test with id " + esTest.getUid() + " is already exists");
-		}
 
 	}
 
