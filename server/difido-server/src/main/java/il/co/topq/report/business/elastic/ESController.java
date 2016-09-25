@@ -4,13 +4,17 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 import java.util.TimeZone;
 
+import org.elasticsearch.ElasticsearchException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
 
 import il.co.topq.difido.model.execution.MachineNode;
 import il.co.topq.difido.model.execution.Node;
@@ -74,29 +78,83 @@ public class ESController {
 			return;
 		}
 		// Get all the current tests that are linked to the execution.
-		List<ElasticsearchTest> storedTests = null;
-		try {
-			storedTests = getStoredTests(machineCreatedEvent);
-		} catch (Exception e) {
-			log.error("Failed to retrieve tests from Elastic due to " + e.getMessage());
-		}
+		// List<ElasticsearchTest> storedTests = null;
+		// try {
+		// storedTests = getStoredTests(machineCreatedEvent);
+		// } catch (Exception e) {
+		// log.error("Failed to retrieve tests from Elastic due to " +
+		// e.getMessage());
+		// }
 		final List<TestNode> executionTests = getExecutionTests(machineCreatedEvent.getMachineNode());
-		final List<TestNode> unstoredTests = findTestsThatAreNotStored(storedTests, executionTests);
-		final List<ElasticsearchTest> testsToStore = convertToElasticTests(unstoredTests);
+		List<ElasticsearchTest> esTests = convertToElasticTests(machineCreatedEvent, executionTests);
+		storeInElastic(esTests);
+
+		// final List<TestNode> unstoredTests =
+		// findTestsThatAreNotStored(storedTests, executionTests);
+		// final List<ElasticsearchTest> testsToStore =
+		// convertToElasticTests(unstoredTests);
 
 	}
 
-	private List<ElasticsearchTest> convertToElasticTests(List<TestNode> unstoredTests) {
-		final List<ElasticsearchTest> testsToStore = new ArrayList<ElasticsearchTest>();
-		for (TestNode testNode : unstoredTests) {
-			testsToStore.add(testNodeToElasticTest(testNode));
+	private void storeInElastic(List<ElasticsearchTest> esTests) {
+		for (ElasticsearchTest esTest : esTests) {
+			try {
+				ESUtils.add(Common.ELASTIC_INDEX, TEST_TYPE, esTest.getUid(), esTest);
+			} catch (ElasticsearchException | JsonProcessingException e) {
+				log.error("Failed to update test node with id " + esTest.getUid() + " due to " + e.getMessage());
+			}
 		}
-		return testsToStore;
+
 	}
 
-	private ElasticsearchTest testNodeToElasticTest(TestNode testNode) {
-//		ElasticsearchTest esTest = new ElasticsearchTest(testNode.getUid(), testNode.gete, timeStamp)
-		return null;
+	private List<ElasticsearchTest> convertToElasticTests(MachineCreatedEvent machineCreatedEvent,
+			List<TestNode> executionTests) {
+		final List<ElasticsearchTest> elasticTests = new ArrayList<ElasticsearchTest>();
+		for (TestNode testNode : executionTests) {
+			elasticTests.add(testNodeToElasticTest(machineCreatedEvent, testNode));
+		}
+		return elasticTests;
+	}
+
+	private ElasticsearchTest testNodeToElasticTest(MachineCreatedEvent machineCreatedEvent, TestNode testNode) {
+		// String timestamp = null;
+		// if (testNode.getTimestamp() != null) {
+		// timestamp = testNode.getTimestamp().replaceFirst(" at ", " ");
+		// } else {
+		// timestamp =
+		// Common.ELASTIC_SEARCH_TIMESTAMP_STRING_FORMATTER.format(new Date());
+		// }
+		ElasticsearchTest esTest = new ElasticsearchTest(testNode.getUid(),
+				machineCreatedEvent.getMetadata().getTimestamp(), convertToUtc(testNode.getTimestamp()));
+		esTest.setStatus(testNode.getStatus().name());
+		esTest.setDuration(testNode.getDuration());
+		esTest.setMachine(machineCreatedEvent.getMachineNode().getName());
+		final ScenarioNode rootScenario = machineCreatedEvent.getMachineNode().getChildren()
+				.get(machineCreatedEvent.getMachineNode().getChildren().size() - 1);
+		if (machineCreatedEvent.getMachineNode().getChildren() != null
+				&& !machineCreatedEvent.getMachineNode().getChildren().isEmpty()) {
+			esTest.setExecution(rootScenario.getName());
+		}
+		if (rootScenario.getScenarioProperties() != null) {
+			esTest.setScenarioProperties(new HashMap<String, String>(rootScenario.getScenarioProperties()));
+		}
+		if (testNode.getParent() != null) {
+			esTest.setParent(testNode.getParent().getName());
+		}
+		if (testNode.getDescription() != null) {
+			esTest.setDescription(testNode.getDescription());
+		}
+		if (testNode.getParameters() != null) {
+			esTest.setProperties(testNode.getParameters());
+		}
+		if (testNode.getProperties() != null) {
+			esTest.setProperties(testNode.getProperties());
+		}
+		esTest.setDuration(testNode.getDuration());
+		esTest.setStatus(testNode.getStatus().name());
+		esTest.setExecutionId(machineCreatedEvent.getExecutionId());
+		esTest.setUrl(findTestUrl(machineCreatedEvent.getMetadata(), testNode.getUid()));
+		return esTest;
 	}
 
 	private List<TestNode> findTestsThatAreNotStored(List<ElasticsearchTest> storedTests,
@@ -120,13 +178,13 @@ public class ESController {
 
 	private List<TestNode> getExecutionTests(MachineNode machineNode) {
 		List<TestNode> executionTests = new ArrayList<TestNode>();
-		for (ScenarioNode rootScenario : machineNode.getAllScenarios()) {
-			for (Node child : rootScenario.getChildren(true)) {
-				if (child instanceof TestNode) {
-					executionTests.add((TestNode) child);
-				}
+		if (null == machineNode.getChildren()) {
+			return executionTests;
+		}
+		for (Node node : machineNode.getChildren(true)) {
+			if (node instanceof TestNode) {
+				executionTests.add((TestNode) node);
 			}
-
 		}
 		return executionTests;
 	}
@@ -142,7 +200,7 @@ public class ESController {
 
 	}
 
-	private String findTestUrl(ExecutionMetadata executionMetadata, TestDetails details) {
+	private String findTestUrl(ExecutionMetadata executionMetadata, String uid) {
 		if (executionMetadata == null) {
 			return "";
 		}
@@ -150,7 +208,7 @@ public class ESController {
 		// http://localhost:8080/reports/execution_2015_04_15__21_14_29_767/tests/test_8691429121669-2/test.html
 		return "http://" + System.getProperty("server.address") + ":" + System.getProperty("server.port") + "/"
 				+ Common.REPORTS_FOLDER_NAME + "/" + executionMetadata.getFolderName() + "/" + "tests" + "/" + "test_"
-				+ details.getUid() + "/" + "test.html";
+				+ uid + "/" + "test.html";
 		// @formatter:on
 	}
 
