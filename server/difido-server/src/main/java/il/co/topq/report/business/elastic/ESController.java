@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.TimeZone;
 
 import org.elasticsearch.ElasticsearchException;
+import org.elasticsearch.action.bulk.BulkResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.event.EventListener;
@@ -20,7 +21,6 @@ import il.co.topq.difido.model.execution.MachineNode;
 import il.co.topq.difido.model.execution.Node;
 import il.co.topq.difido.model.execution.ScenarioNode;
 import il.co.topq.difido.model.execution.TestNode;
-import il.co.topq.difido.model.test.TestDetails;
 import il.co.topq.report.Common;
 import il.co.topq.report.business.execution.ExecutionMetadata;
 import il.co.topq.report.events.ExecutionCreatedEvent;
@@ -46,29 +46,9 @@ public class ESController {
 	public static boolean enabled = true;
 
 	@EventListener
-	public void onExecutionCreatedEvent(ExecutionCreatedEvent executionCreatedEvent) {
-	}
-
-	@EventListener
-	public void onExecutionDeletedEvent(ExecutionDeletedEvent executionDeletedEvent) {
-	}
-
-	@EventListener
 	public void onExecutionEndedEvent(ExecutionEndedEvent executionEndedEvent) {
 		if (!enabled) {
 			return;
-		}
-	}
-
-	private String convertToUtc(final String dateInLocalTime) {
-		try {
-			final Date originalDate = Common.ELASTIC_SEARCH_TIMESTAMP_STRING_FORMATTER.parse(dateInLocalTime);
-			final SimpleDateFormat sdf = (SimpleDateFormat) Common.ELASTIC_SEARCH_TIMESTAMP_STRING_FORMATTER.clone();
-			sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
-			return sdf.format(originalDate);
-		} catch (ParseException e) {
-			log.warn("Failed to convert date " + dateInLocalTime + " to UTC time zone");
-			return dateInLocalTime;
 		}
 	}
 
@@ -85,9 +65,15 @@ public class ESController {
 		// log.error("Failed to retrieve tests from Elastic due to " +
 		// e.getMessage());
 		// }
+		long currentTime = System.currentTimeMillis();
 		final List<TestNode> executionTests = getExecutionTests(machineCreatedEvent.getMachineNode());
+		log.trace("Getting execution test toke " + (System.currentTimeMillis() - currentTime));
+		currentTime = System.currentTimeMillis();
 		List<ElasticsearchTest> esTests = convertToElasticTests(machineCreatedEvent, executionTests);
+		log.trace("Converting tests to Elastic toke " + (System.currentTimeMillis() - currentTime));
+		currentTime = System.currentTimeMillis();
 		storeInElastic(esTests);
+		log.trace("Storing tests in Elastic toke " + (System.currentTimeMillis() - currentTime));
 
 		// final List<TestNode> unstoredTests =
 		// findTestsThatAreNotStored(storedTests, executionTests);
@@ -97,13 +83,25 @@ public class ESController {
 	}
 
 	private void storeInElastic(List<ElasticsearchTest> esTests) {
-		for (ElasticsearchTest esTest : esTests) {
-			try {
-				ESUtils.add(Common.ELASTIC_INDEX, TEST_TYPE, esTest.getUid(), esTest);
-			} catch (ElasticsearchException | JsonProcessingException e) {
-				log.error("Failed to update test node with id " + esTest.getUid() + " due to " + e.getMessage());
-			}
+		String[] ids = new String[esTests.size()];
+		for (int i = 0 ; i < ids.length ; i++){
+			ids[i] = esTests.get(i).getUid();
 		}
+		try {
+			BulkResponse response = ESUtils.addBulk(Common.ELASTIC_INDEX, TEST_TYPE, ids, esTests);
+			if (response.hasFailures()){
+				log.error("Failed updating tests in Elastic");
+			}
+		} catch(Exception e) {
+			log.error("Failed to add tests to Elastic due to " + e.getMessage());
+		}
+//		for (ElasticsearchTest esTest : esTests) {
+//			try {
+//				ESUtils.add(Common.ELASTIC_INDEX, TEST_TYPE, esTest.getUid(), esTest);
+//			} catch (ElasticsearchException | JsonProcessingException e) {
+//				log.error("Failed to update test node with id " + esTest.getUid() + " due to " + e.getMessage());
+//			}
+//		}
 
 	}
 
@@ -117,15 +115,16 @@ public class ESController {
 	}
 
 	private ElasticsearchTest testNodeToElasticTest(MachineCreatedEvent machineCreatedEvent, TestNode testNode) {
-		// String timestamp = null;
-		// if (testNode.getTimestamp() != null) {
-		// timestamp = testNode.getTimestamp().replaceFirst(" at ", " ");
-		// } else {
-		// timestamp =
-		// Common.ELASTIC_SEARCH_TIMESTAMP_STRING_FORMATTER.format(new Date());
-		// }
-		ElasticsearchTest esTest = new ElasticsearchTest(testNode.getUid(),
-				machineCreatedEvent.getMetadata().getTimestamp(), convertToUtc(testNode.getTimestamp()));
+		String timestamp = null;
+		if (testNode.getTimestamp() != null) {
+			timestamp = testNode.getDate() + " " + testNode.getTimestamp();
+		} else {
+			timestamp = Common.ELASTIC_SEARCH_TIMESTAMP_STRING_FORMATTER.format(new Date());
+		}
+		String executionTimestamp = convertToUtc(machineCreatedEvent.getMetadata().getTimestamp());
+		final ElasticsearchTest esTest = new ElasticsearchTest(testNode.getUid(), executionTimestamp,
+				convertToUtc(timestamp));
+		esTest.setName(testNode.getName());
 		esTest.setStatus(testNode.getStatus().name());
 		esTest.setDuration(testNode.getDuration());
 		esTest.setMachine(machineCreatedEvent.getMachineNode().getName());
@@ -145,7 +144,7 @@ public class ESController {
 			esTest.setDescription(testNode.getDescription());
 		}
 		if (testNode.getParameters() != null) {
-			esTest.setProperties(testNode.getParameters());
+			esTest.setParameters(testNode.getParameters());
 		}
 		if (testNode.getProperties() != null) {
 			esTest.setProperties(testNode.getProperties());
@@ -210,6 +209,18 @@ public class ESController {
 				+ Common.REPORTS_FOLDER_NAME + "/" + executionMetadata.getFolderName() + "/" + "tests" + "/" + "test_"
 				+ uid + "/" + "test.html";
 		// @formatter:on
+	}
+
+	private String convertToUtc(final String dateInLocalTime) {
+		try {
+			final Date originalDate = Common.ELASTIC_SEARCH_TIMESTAMP_STRING_FORMATTER.parse(dateInLocalTime);
+			final SimpleDateFormat sdf = (SimpleDateFormat) Common.ELASTIC_SEARCH_TIMESTAMP_STRING_FORMATTER.clone();
+			sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
+			return sdf.format(originalDate);
+		} catch (ParseException e) {
+			log.warn("Failed to convert date " + dateInLocalTime + " to UTC time zone");
+			return dateInLocalTime;
+		}
 	}
 
 }
