@@ -35,6 +35,8 @@ import org.testng.annotations.Test;
 public abstract class AbstractDifidoReporter implements Reporter {
 
 	private static final SimpleDateFormat TIME_FORMAT = new SimpleDateFormat("HH:mm:ss:");
+	
+	private static final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("yyyy/MM/dd");
 
 	private static final SimpleDateFormat TIME_AND_DATE_FORMAT = new SimpleDateFormat("yyyy/MM/dd 'at' HH:mm:ss");
 
@@ -161,10 +163,12 @@ public abstract class AbstractDifidoReporter implements Reporter {
 
 		currentTest = new TestNode(index++, testName, executionUid + "-" + index);
 		currentTest.setClassName(testClassName);
-		currentTest.setTimestamp(TIME_FORMAT.format(new Date(result.getStartMillis())));
+		final Date date = new Date(result.getStartMillis());
+		currentTest.setTimestamp(TIME_FORMAT.format(date));
+		currentTest.setDate(DATE_FORMAT.format(date));
 		currentClassScenario.addChild(currentTest);
 		testDetails = new TestDetails(testName, currentTest.getUid());
-		testDetails.setTimeStamp(TIME_AND_DATE_FORMAT.format(new Date(result.getStartMillis())));
+		testDetails.setTimeStamp(TIME_AND_DATE_FORMAT.format(date));
 		if (result.getMethod().getDescription() != null) {
 			testDetails.setDescription(result.getMethod().getDescription());
 			currentTest.setDescription(result.getMethod().getDescription());

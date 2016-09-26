@@ -10,7 +10,7 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 
-@JsonPropertyOrder({ "index", "uid","description", "duration", "timestamp", "className","parameters","properties" })
+@JsonPropertyOrder({ "index", "uid","description", "duration", "date","timestamp", "className","parameters","properties" })
 @JsonIgnoreProperties(ignoreUnknown=true)
 public class TestNode extends Node {
 
@@ -26,6 +26,15 @@ public class TestNode extends Node {
 	@JsonProperty("duration")
 	private long duration;
 
+	/**
+	 * yyyy/MM/dd
+	 */
+	@JsonProperty("date")
+	private String date;
+	
+	/**
+	 * HH:mm:ss
+	 */
 	@JsonProperty("timestamp")
 	private String timestamp;
 
@@ -117,6 +126,14 @@ public class TestNode extends Node {
 
 	public void setDuration(long duration) {
 		this.duration = duration;
+	}
+	
+	public String getDate() {
+		return date;
+	}
+
+	public void setDate(String date) {
+		this.date = date;
 	}
 
 	public String getTimestamp() {
