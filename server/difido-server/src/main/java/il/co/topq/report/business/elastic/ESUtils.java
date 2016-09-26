@@ -64,7 +64,7 @@ public class ESUtils {
 	 * @return
 	 * @throws JsonProcessingException 
 	 */
-	public static BulkResponse addBulk(String index, String type, String[] ids, List<ElasticsearchTest> objects) throws JsonProcessingException {
+	public static BulkResponse addBulk(String index, String type, String[] ids, List<?> objects) throws JsonProcessingException {
 		if (ids.length != objects.size()){
 			throw new IllegalArgumentException("Number of ids have to be equals to number of objects");
 		}

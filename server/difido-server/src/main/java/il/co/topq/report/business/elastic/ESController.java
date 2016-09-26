@@ -83,25 +83,30 @@ public class ESController {
 	}
 
 	private void storeInElastic(List<ElasticsearchTest> esTests) {
+		if (null == esTests || esTests.isEmpty()) {
+			return;
+		}
 		String[] ids = new String[esTests.size()];
-		for (int i = 0 ; i < ids.length ; i++){
+		for (int i = 0; i < ids.length; i++) {
 			ids[i] = esTests.get(i).getUid();
 		}
 		try {
 			BulkResponse response = ESUtils.addBulk(Common.ELASTIC_INDEX, TEST_TYPE, ids, esTests);
-			if (response.hasFailures()){
+			if (response.hasFailures()) {
 				log.error("Failed updating tests in Elastic");
 			}
-		} catch(Exception e) {
+		} catch (Exception e) {
 			log.error("Failed to add tests to Elastic due to " + e.getMessage());
 		}
-//		for (ElasticsearchTest esTest : esTests) {
-//			try {
-//				ESUtils.add(Common.ELASTIC_INDEX, TEST_TYPE, esTest.getUid(), esTest);
-//			} catch (ElasticsearchException | JsonProcessingException e) {
-//				log.error("Failed to update test node with id " + esTest.getUid() + " due to " + e.getMessage());
-//			}
-//		}
+		// for (ElasticsearchTest esTest : esTests) {
+		// try {
+		// ESUtils.add(Common.ELASTIC_INDEX, TEST_TYPE, esTest.getUid(),
+		// esTest);
+		// } catch (ElasticsearchException | JsonProcessingException e) {
+		// log.error("Failed to update test node with id " + esTest.getUid() + "
+		// due to " + e.getMessage());
+		// }
+		// }
 
 	}
 
