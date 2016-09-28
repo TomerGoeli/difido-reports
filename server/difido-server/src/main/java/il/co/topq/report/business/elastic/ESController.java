@@ -73,6 +73,9 @@ public class ESController {
 	}
 
 	private void storeInElastic(List<ElasticsearchTest> esTests) {
+		if (null == esTests || esTests.isEmpty()) {
+			return;
+		}
 		String[] ids = new String[esTests.size()];
 		for (int i = 0; i < ids.length; i++) {
 			ids[i] = esTests.get(i).getUid();
@@ -85,7 +88,6 @@ public class ESController {
 		} catch (Exception e) {
 			log.error("Failed to add tests to Elastic due to " + e.getMessage());
 		}
-
 	}
 
 	private List<ElasticsearchTest> convertToElasticTests(ExecutionMetadata metadata, MachineNode machineNode,
