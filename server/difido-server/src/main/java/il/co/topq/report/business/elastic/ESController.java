@@ -8,14 +8,11 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.TimeZone;
 
-import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.action.bulk.BulkResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
-
-import com.fasterxml.jackson.core.JsonProcessingException;
 
 import il.co.topq.difido.model.execution.MachineNode;
 import il.co.topq.difido.model.execution.Node;
@@ -23,11 +20,8 @@ import il.co.topq.difido.model.execution.ScenarioNode;
 import il.co.topq.difido.model.execution.TestNode;
 import il.co.topq.report.Common;
 import il.co.topq.report.business.execution.ExecutionMetadata;
-import il.co.topq.report.events.ExecutionCreatedEvent;
-import il.co.topq.report.events.ExecutionDeletedEvent;
 import il.co.topq.report.events.ExecutionEndedEvent;
 import il.co.topq.report.events.MachineCreatedEvent;
-import il.co.topq.report.events.TestDetailsCreatedEvent;
 
 /**
  * 
@@ -45,93 +39,81 @@ public class ESController {
 	// Probably using the application context.
 	public static boolean enabled = true;
 
+	private static boolean storeOnlyAtEnd = false;
+
 	@EventListener
 	public void onExecutionEndedEvent(ExecutionEndedEvent executionEndedEvent) {
 		if (!enabled) {
 			return;
 		}
+		for (MachineNode machineNode : executionEndedEvent.getMetadata().getExecution().getMachines()){
+			storeAll(executionEndedEvent.getMetadata(), machineNode);
+		}
+
 	}
 
 	@EventListener
 	public void onMachineCreatedEvent(MachineCreatedEvent machineCreatedEvent) {
-		if (!enabled) {
+		if (!enabled || storeOnlyAtEnd) {
 			return;
 		}
-		// Get all the current tests that are linked to the execution.
-		// List<ElasticsearchTest> storedTests = null;
-		// try {
-		// storedTests = getStoredTests(machineCreatedEvent);
-		// } catch (Exception e) {
-		// log.error("Failed to retrieve tests from Elastic due to " +
-		// e.getMessage());
-		// }
+		storeAll(machineCreatedEvent.getMetadata(),machineCreatedEvent.getMachineNode());
+	}
+
+	private void storeAll(ExecutionMetadata metadata, MachineNode machineNode) {
 		long currentTime = System.currentTimeMillis();
-		final List<TestNode> executionTests = getExecutionTests(machineCreatedEvent.getMachineNode());
+		final List<TestNode> executionTests = getExecutionTests(machineNode);
 		log.trace("Getting execution test toke " + (System.currentTimeMillis() - currentTime));
 		currentTime = System.currentTimeMillis();
-		List<ElasticsearchTest> esTests = convertToElasticTests(machineCreatedEvent, executionTests);
+		List<ElasticsearchTest> esTests = convertToElasticTests(metadata,machineNode, executionTests);
 		log.trace("Converting tests to Elastic toke " + (System.currentTimeMillis() - currentTime));
 		currentTime = System.currentTimeMillis();
 		storeInElastic(esTests);
 		log.trace("Storing tests in Elastic toke " + (System.currentTimeMillis() - currentTime));
-
-		// final List<TestNode> unstoredTests =
-		// findTestsThatAreNotStored(storedTests, executionTests);
-		// final List<ElasticsearchTest> testsToStore =
-		// convertToElasticTests(unstoredTests);
-
 	}
 
 	private void storeInElastic(List<ElasticsearchTest> esTests) {
 		String[] ids = new String[esTests.size()];
-		for (int i = 0 ; i < ids.length ; i++){
+		for (int i = 0; i < ids.length; i++) {
 			ids[i] = esTests.get(i).getUid();
 		}
 		try {
 			BulkResponse response = ESUtils.addBulk(Common.ELASTIC_INDEX, TEST_TYPE, ids, esTests);
-			if (response.hasFailures()){
+			if (response.hasFailures()) {
 				log.error("Failed updating tests in Elastic");
 			}
-		} catch(Exception e) {
+		} catch (Exception e) {
 			log.error("Failed to add tests to Elastic due to " + e.getMessage());
 		}
-//		for (ElasticsearchTest esTest : esTests) {
-//			try {
-//				ESUtils.add(Common.ELASTIC_INDEX, TEST_TYPE, esTest.getUid(), esTest);
-//			} catch (ElasticsearchException | JsonProcessingException e) {
-//				log.error("Failed to update test node with id " + esTest.getUid() + " due to " + e.getMessage());
-//			}
-//		}
 
 	}
 
-	private List<ElasticsearchTest> convertToElasticTests(MachineCreatedEvent machineCreatedEvent,
+	private List<ElasticsearchTest> convertToElasticTests(ExecutionMetadata metadata, MachineNode machineNode,
 			List<TestNode> executionTests) {
 		final List<ElasticsearchTest> elasticTests = new ArrayList<ElasticsearchTest>();
 		for (TestNode testNode : executionTests) {
-			elasticTests.add(testNodeToElasticTest(machineCreatedEvent, testNode));
+			elasticTests.add(testNodeToElasticTest(metadata, machineNode, testNode));
 		}
 		return elasticTests;
 	}
 
-	private ElasticsearchTest testNodeToElasticTest(MachineCreatedEvent machineCreatedEvent, TestNode testNode) {
+	private ElasticsearchTest testNodeToElasticTest(ExecutionMetadata metadata, MachineNode machineNode,
+			TestNode testNode) {
 		String timestamp = null;
 		if (testNode.getTimestamp() != null) {
 			timestamp = testNode.getDate() + " " + testNode.getTimestamp();
 		} else {
 			timestamp = Common.ELASTIC_SEARCH_TIMESTAMP_STRING_FORMATTER.format(new Date());
 		}
-		String executionTimestamp = convertToUtc(machineCreatedEvent.getMetadata().getTimestamp());
+		String executionTimestamp = convertToUtc(metadata.getTimestamp());
 		final ElasticsearchTest esTest = new ElasticsearchTest(testNode.getUid(), executionTimestamp,
 				convertToUtc(timestamp));
 		esTest.setName(testNode.getName());
 		esTest.setStatus(testNode.getStatus().name());
 		esTest.setDuration(testNode.getDuration());
-		esTest.setMachine(machineCreatedEvent.getMachineNode().getName());
-		final ScenarioNode rootScenario = machineCreatedEvent.getMachineNode().getChildren()
-				.get(machineCreatedEvent.getMachineNode().getChildren().size() - 1);
-		if (machineCreatedEvent.getMachineNode().getChildren() != null
-				&& !machineCreatedEvent.getMachineNode().getChildren().isEmpty()) {
+		esTest.setMachine(machineNode.getName());
+		final ScenarioNode rootScenario = machineNode.getChildren().get(machineNode.getChildren().size() - 1);
+		if (machineNode.getChildren() != null && !machineNode.getChildren().isEmpty()) {
 			esTest.setExecution(rootScenario.getName());
 		}
 		if (rootScenario.getScenarioProperties() != null) {
@@ -151,29 +133,11 @@ public class ESController {
 		}
 		esTest.setDuration(testNode.getDuration());
 		esTest.setStatus(testNode.getStatus().name());
-		esTest.setExecutionId(machineCreatedEvent.getExecutionId());
-		esTest.setUrl(findTestUrl(machineCreatedEvent.getMetadata(), testNode.getUid()));
+		esTest.setExecutionId(metadata.getId());
+		esTest.setUrl(findTestUrl(metadata, testNode.getUid()));
 		return esTest;
 	}
 
-	private List<TestNode> findTestsThatAreNotStored(List<ElasticsearchTest> storedTests,
-			List<TestNode> executionTests) {
-		List<TestNode> unstoredTests = new ArrayList<TestNode>();
-		for (TestNode testNode : executionTests) {
-			boolean found = false;
-			for (ElasticsearchTest executionTest : storedTests) {
-				if (executionTest.getUid() == testNode.getUid()) {
-					found = true;
-					continue;
-				}
-			}
-			if (!found) {
-				unstoredTests.add(testNode);
-			}
-
-		}
-		return unstoredTests;
-	}
 
 	private List<TestNode> getExecutionTests(MachineNode machineNode) {
 		List<TestNode> executionTests = new ArrayList<TestNode>();
@@ -186,17 +150,6 @@ public class ESController {
 			}
 		}
 		return executionTests;
-	}
-
-	private List<ElasticsearchTest> getStoredTests(MachineCreatedEvent machineCreatedEvent) throws Exception {
-		// TODO: We should accept tests that are in status 'in progress;
-		return ESUtils.getAllByQuery(Common.ELASTIC_INDEX, TEST_TYPE, ElasticsearchTest.class,
-				"executionId:" + machineCreatedEvent.getExecutionId());
-	}
-
-	@EventListener
-	public void OnTestDetailsCreatedEvent(TestDetailsCreatedEvent testDetailsCreatedEvent) {
-
 	}
 
 	private String findTestUrl(ExecutionMetadata executionMetadata, String uid) {
