@@ -141,7 +141,6 @@ public class ESController {
 		return esTest;
 	}
 
-
 	private List<TestNode> getExecutionTests(MachineNode machineNode) {
 		List<TestNode> executionTests = new ArrayList<TestNode>();
 		if (null == machineNode.getChildren()) {
