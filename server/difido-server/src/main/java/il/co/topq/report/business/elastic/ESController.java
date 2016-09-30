@@ -3,9 +3,13 @@ package il.co.topq.report.business.elastic;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.TimeZone;
 
 import org.elasticsearch.action.bulk.BulkResponse;
@@ -35,6 +39,9 @@ public class ESController {
 
 	private final Logger log = LoggerFactory.getLogger(ESController.class);
 
+	private volatile Map<Integer, Set<TestNode>> activeAndUpdatedExecutions = Collections
+			.synchronizedMap(new HashMap<Integer, Set<TestNode>>());
+
 	// TODO: For testing. Of course that this should be handled differently.
 	// Probably using the application context.
 	public static boolean enabled = true;
@@ -46,9 +53,10 @@ public class ESController {
 		if (!enabled) {
 			return;
 		}
-		for (MachineNode machineNode : executionEndedEvent.getMetadata().getExecution().getMachines()){
+		for (MachineNode machineNode : executionEndedEvent.getMetadata().getExecution().getMachines()) {
 			storeAll(executionEndedEvent.getMetadata(), machineNode);
 		}
+		activeAndUpdatedExecutions.remove(executionEndedEvent.getExecutionId());
 
 	}
 
@@ -57,22 +65,78 @@ public class ESController {
 		if (!enabled || storeOnlyAtEnd) {
 			return;
 		}
-		storeAll(machineCreatedEvent.getMetadata(),machineCreatedEvent.getMachineNode());
+		storeAll(machineCreatedEvent.getMetadata(), machineCreatedEvent.getMachineNode());
 	}
 
 	private void storeAll(ExecutionMetadata metadata, MachineNode machineNode) {
+		Set<TestNode> executionTests = getExecutionTests(machineNode);
+		Set<TestNode> updatedExecutionTests;
+		Set<TestNode> testsToUpdate;
 		long currentTime = System.currentTimeMillis();
-		final List<TestNode> executionTests = getExecutionTests(machineNode);
-		log.trace("Getting execution test toke " + (System.currentTimeMillis() - currentTime));
+		if (activeAndUpdatedExecutions.containsKey(metadata.getId())) {
+			updatedExecutionTests = activeAndUpdatedExecutions.get(metadata.getId());
+			currentTime = System.currentTimeMillis();
+			log.trace("Fetching updated tests to update toke " + (System.currentTimeMillis() - currentTime));
+			currentTime = System.currentTimeMillis();
+//			testsToUpdate = new HashSet<TestNode>(executionTests);
+//			testsToUpdate.removeAll(updatedExecutionTests);
+			testsToUpdate = findTestsToUpdate(executionTests, updatedExecutionTests);
+			log.trace("Finding tests to update toke " + (System.currentTimeMillis() - currentTime));
+		} else {
+			testsToUpdate = executionTests;
+		}
 		currentTime = System.currentTimeMillis();
-		List<ElasticsearchTest> esTests = convertToElasticTests(metadata,machineNode, executionTests);
-		log.trace("Converting tests to Elastic toke " + (System.currentTimeMillis() - currentTime));
-		currentTime = System.currentTimeMillis();
-		storeInElastic(esTests);
-		log.trace("Storing tests in Elastic toke " + (System.currentTimeMillis() - currentTime));
+		if (!executionTests.isEmpty()) {
+			log.trace("Getting execution tests toke " + (System.currentTimeMillis() - currentTime));
+			currentTime = System.currentTimeMillis();
+			List<ElasticsearchTest> esTests = convertToElasticTests(metadata, machineNode, testsToUpdate);
+			log.trace("Converting tests to Elastic toke " + (System.currentTimeMillis() - currentTime));
+			currentTime = System.currentTimeMillis();
+			storeInElastic(esTests);
+			log.trace("Storing tests in Elastic toke " + (System.currentTimeMillis() - currentTime));
+
+		}
+		Set<TestNode> clonedTests = cloneTests(executionTests);
+		activeAndUpdatedExecutions.put(metadata.getId(), clonedTests);
+	}
+
+	private Set<TestNode> cloneTests(Set<TestNode> executionTests) {
+		Set<TestNode> clonedTests = new HashSet<TestNode>();
+		for (TestNode test : executionTests) {
+			clonedTests.add(new TestNode(test));
+		}
+		return clonedTests;
+		
+	}
+
+	private Set<TestNode> findTestsToUpdate(Set<TestNode> executionTests, Set<TestNode> updatedExecutionTests) {
+		Set<TestNode> testsToUpdate = new HashSet<TestNode>();
+		// for (TestNode test : executionTests) {
+		// if (!updatedExecutionTests.contains(test)) {
+		// testsToUpdate.add(test);
+		// }
+		// }
+
+		log.trace("Tests in execution tests: " + executionTests.size() + ", tests in updated tests: "
+				+ updatedExecutionTests.size());
+		for (TestNode test : executionTests) {
+			boolean updated = false;
+			for (TestNode updatedTest : updatedExecutionTests) {
+				if (updatedTest.equals(test)) {
+					updated = true;
+					break;
+				}
+			}
+			if (!updated) {
+				testsToUpdate.add(test);
+			}
+		}
+
+		return testsToUpdate;
 	}
 
 	private void storeInElastic(List<ElasticsearchTest> esTests) {
+		log.debug("About to add or update " + esTests.size() + " tests in the Elastic");
 		if (null == esTests || esTests.isEmpty()) {
 			return;
 		}
@@ -92,7 +156,7 @@ public class ESController {
 	}
 
 	private List<ElasticsearchTest> convertToElasticTests(ExecutionMetadata metadata, MachineNode machineNode,
-			List<TestNode> executionTests) {
+			Set<TestNode> executionTests) {
 		final List<ElasticsearchTest> elasticTests = new ArrayList<ElasticsearchTest>();
 		for (TestNode testNode : executionTests) {
 			elasticTests.add(testNodeToElasticTest(metadata, machineNode, testNode));
@@ -141,8 +205,11 @@ public class ESController {
 		return esTest;
 	}
 
-	private List<TestNode> getExecutionTests(MachineNode machineNode) {
-		List<TestNode> executionTests = new ArrayList<TestNode>();
+	private Set<TestNode> getExecutionTests(MachineNode machineNode) {
+		Set<TestNode> executionTests = new HashSet<TestNode>();
+		if (null == machineNode) {
+			return executionTests;
+		}
 		if (null == machineNode.getChildren()) {
 			return executionTests;
 		}
