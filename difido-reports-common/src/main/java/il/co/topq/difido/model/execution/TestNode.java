@@ -72,11 +72,11 @@ public class TestNode extends Node {
 		date = testNode.date;
 		timestamp = testNode.timestamp;
 		className = testNode.className;
-		if (properties != null){
-			properties = new HashMap<String,String>(properties);
+		if (testNode.properties != null){
+			properties = new HashMap<String,String>(testNode.properties);
 		}
-		if (parameters != null){
-			parameters= new HashMap<String,String>(parameters);
+		if (testNode.parameters != null){
+			parameters= new HashMap<String,String>(testNode.parameters);
 		}
 	}
 
