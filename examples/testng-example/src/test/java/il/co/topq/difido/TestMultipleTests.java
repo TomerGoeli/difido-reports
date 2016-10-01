@@ -5,7 +5,7 @@ import org.testng.annotations.Test;
 
 public class TestMultipleTests extends AbstractDifidoTestCase {
 
-	private int numOfTests = 10;
+	private int numOfTests = 100;
 
 	@Test(description = "Test that repeates many time", dataProvider = "data")
 	public void testTheRepeatesManyTimes(int index) {
