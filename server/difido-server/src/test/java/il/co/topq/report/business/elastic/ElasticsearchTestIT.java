@@ -23,59 +23,23 @@ public class ElasticsearchTestIT {
 	@Test
 	public void testEquals() {
 		ElasticsearchTest esTest0 = ElasticsearchTestGenerator.generateEsTest(executionId, executionTimeStamp, "aaa");
-		ElasticsearchTest esTest1 = new ElasticsearchTest(esTest0.getUid(), esTest0.getExecutionTimeStamp(),
-				esTest0.getTimeStamp());
-		esTest1.setDescription(esTest0.getDescription());
-		esTest1.setDuration(esTest0.getDuration());
-		esTest1.setMachine(esTest0.getMachine());
-		esTest1.setName(esTest0.getName());
-		esTest1.setExecutionId(esTest0.getExecutionId());
-		esTest1.setParent(esTest0.getParent());
-		esTest1.setStatus(esTest0.getStatus());
-		esTest1.setUrl(esTest0.getUrl());
-		esTest1.setParameters(esTest0.getParameters());
-		esTest1.setProperties(esTest0.getProperties());
-		esTest1.setScenarioProperties(esTest0.getScenarioProperties());
+		ElasticsearchTest esTest1 = new ElasticsearchTest(esTest0);
 		Assert.assertTrue(esTest0.equals(esTest1));
 	}
 
 	@Test
 	public void testPositiveHashcode() {
 		ElasticsearchTest esTest0 = ElasticsearchTestGenerator.generateEsTest(executionId, executionTimeStamp, "aaa");
-		ElasticsearchTest esTest1 = new ElasticsearchTest(esTest0.getUid(), esTest0.getExecutionTimeStamp(),
-				esTest0.getTimeStamp());
-		esTest1.setDescription(esTest0.getDescription());
-		esTest1.setDuration(esTest0.getDuration());
-		esTest1.setMachine(esTest0.getMachine());
-		esTest1.setName(esTest0.getName());
-		esTest1.setExecutionId(esTest0.getExecutionId());
-		esTest1.setParent(esTest0.getParent());
-		esTest1.setStatus(esTest0.getStatus());
-		esTest1.setUrl(esTest0.getUrl());
-		esTest1.setParameters(esTest0.getParameters());
-		esTest1.setProperties(esTest0.getProperties());
-		esTest1.setScenarioProperties(esTest0.getScenarioProperties());
+		ElasticsearchTest esTest1 = new ElasticsearchTest(esTest0);
 		Assert.assertTrue(esTest0.hashCode() == esTest1.hashCode());
 	}
-	
+
 	@Test
 	public void testNegativeHashcode() {
 		ElasticsearchTest esTest0 = ElasticsearchTestGenerator.generateEsTest(executionId, executionTimeStamp, "aaa");
-		ElasticsearchTest esTest1 = new ElasticsearchTest(esTest0.getUid(), esTest0.getExecutionTimeStamp(),
-				esTest0.getTimeStamp());
-		esTest1.setDescription(esTest0.getDescription());
-		esTest1.setDuration(esTest0.getDuration());
-		esTest1.setMachine(esTest0.getMachine());
-		esTest1.setName(esTest0.getName() +"a");
-		esTest1.setExecutionId(esTest0.getExecutionId());
-		esTest1.setParent(esTest0.getParent());
-		esTest1.setStatus(esTest0.getStatus());
-		esTest1.setUrl(esTest0.getUrl());
-		esTest1.setParameters(esTest0.getParameters());
-		esTest1.setProperties(esTest0.getProperties());
-		esTest1.setScenarioProperties(esTest0.getScenarioProperties());
+		ElasticsearchTest esTest1 = new ElasticsearchTest(esTest0);
+		esTest1.setName(esTest1.getName() + "a");
 		Assert.assertTrue(esTest0.hashCode() != esTest1.hashCode());
 	}
-
 
 }

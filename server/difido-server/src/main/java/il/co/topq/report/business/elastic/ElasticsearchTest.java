@@ -1,5 +1,6 @@
 package il.co.topq.report.business.elastic;
 
+import java.util.HashMap;
 import java.util.Map;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -65,6 +66,34 @@ public class ElasticsearchTest {
 	}
 
 	public ElasticsearchTest() {
+	}
+	
+	/**
+	 * Copy constructor
+	 * @param other
+	 */
+	public ElasticsearchTest(ElasticsearchTest other){
+		this.uid = other.getUid();
+		this.executionTimeStamp = other.executionTimeStamp;
+		this.timeStamp = other.timeStamp;
+		this.description = other.description;
+		this.duration = other.duration;
+		this.machine = other.machine;
+		this.name = other.name;
+		this.executionId = other.executionId;
+		this.parent = other.parent;
+		this.status = other.status;
+		this.url = other.url;
+		if (other.parameters != null) {
+			this.parameters = new HashMap<String,String>(other.parameters);
+		}
+		if (other.properties != null) {
+			this.properties = new HashMap<String,String>(other.properties);
+		}
+		if (other.scenarioProperties != null){
+			this.scenarioProperties = new HashMap<String,String>(other.scenarioProperties);
+		}
+	
 	}
 	
 	@JsonIgnore
