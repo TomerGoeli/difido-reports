@@ -124,7 +124,7 @@ public class ESController {
 
 	}
 
-	private void addOrUpdateInElastic(List<ElasticsearchTest> esTests) {
+	void addOrUpdateInElastic(List<ElasticsearchTest> esTests) {
 		log.debug("About to add or update " + esTests.size() + " tests in the Elastic");
 		if (null == esTests || esTests.isEmpty()) {
 			return;
