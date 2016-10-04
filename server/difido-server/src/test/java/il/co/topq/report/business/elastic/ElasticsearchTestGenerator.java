@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Map;
 
 import il.co.topq.report.Common;
+import il.co.topq.report.business.elastic.ElasticsearchTest;
 
 class ElasticsearchTestGenerator {
 
