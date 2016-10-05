@@ -25,9 +25,13 @@ public class EsControllerIT {
 	private int executionId = 1;
 
 	@BeforeClass
-	public static void setup() throws IOException {
+	public static void setup() throws IOException, InterruptedException {
 		FileUtils.deleteDirectory(new File("data"));
 		Application.startElastic();
+
+		// It seems that we need to give the ELastic some time to create the
+		// index on slow machines
+		Thread.sleep(1000);
 		escontroller = new ESController();
 		executionTimeStamp = Common.ELASTIC_SEARCH_TIMESTAMP_STRING_FORMATTER.format(new Date());
 
@@ -45,9 +49,9 @@ public class EsControllerIT {
 		Assert.assertTrue(storedTests.size() == 0);
 
 	}
-	
+
 	@Test
-	public void testAddExecution() throws Exception{
+	public void testAddExecution() throws Exception {
 		ExecutionMetadata metaData = ExecutionMetaDataGenerator.generateExecutionMetadata(1, 2, 10);
 		ExecutionEndedEvent event = new ExecutionEndedEvent(metaData);
 		escontroller.onExecutionEndedEvent(event);
