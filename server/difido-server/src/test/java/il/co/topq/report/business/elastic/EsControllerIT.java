@@ -31,13 +31,13 @@ public class EsControllerIT {
 
 		// It seems that we need to give the ELastic some time to create the
 		// index on slow machines
-		Thread.sleep(1000);
+		Thread.sleep(5000);
 		escontroller = new ESController();
 		executionTimeStamp = Common.ELASTIC_SEARCH_TIMESTAMP_STRING_FORMATTER.format(new Date());
 
 	}
 
-	@Test
+	@Test	
 	public void testAddOrUpdateToElastic() throws Exception {
 		List<ElasticsearchTest> tests = ElasticsearchTestGenerator.generateTests(executionId, executionTimeStamp, 10);
 		escontroller.addOrUpdateInElastic(tests);

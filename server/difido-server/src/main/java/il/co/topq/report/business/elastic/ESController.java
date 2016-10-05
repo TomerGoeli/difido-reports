@@ -74,45 +74,51 @@ public class ESController {
 
 	private void saveDirtyTests(ExecutionMetadata metadata, MachineNode machineNode) {
 		long currentTime = System.currentTimeMillis();
-		Set<TestNode> executionTests = getExecutionTests(machineNode);
+		final Set<TestNode> executionTests = getExecutionTests(machineNode);
 		log.trace("Fetching all execution tests took " + (System.currentTimeMillis() - currentTime + " ms"));
-		
-		Set<TestNode> updatedExecutionTests;
-		Set<TestNode> testsToUpdate;
-		if (savedTestsPerExecution.containsKey(metadata.getId())) {
-			// There are tests in this execution that are already stored in the Elastic
-			
-			// Get all the tests that were saved in the Elastic
-			currentTime = System.currentTimeMillis();
-			updatedExecutionTests = savedTestsPerExecution.get(metadata.getId());
-			log.trace("Fetching saved tests took " + (System.currentTimeMillis() - currentTime + " ms"));
-			
-			// Remove the updated tests from all the tests
-			currentTime = System.currentTimeMillis();
-			testsToUpdate = new HashSet<TestNode>(executionTests);
-			testsToUpdate.removeAll(updatedExecutionTests);
-			log.trace("Finding tests that are not updated in the Elastic took "
-					+ (System.currentTimeMillis() - currentTime + " ms"));
-		} else {
-			// It is the first time we are saving tests for this execution
-			testsToUpdate = executionTests;
+		if (executionTests.isEmpty()) {
+			return;
 		}
-		
-		if (!executionTests.isEmpty()) {
-			currentTime = System.currentTimeMillis();
-			List<ElasticsearchTest> esTests = convertToElasticTests(metadata, machineNode, testsToUpdate);
-			log.trace("Converting tests to Elastic took " + (System.currentTimeMillis() - currentTime + " ms"));
-			
-			currentTime = System.currentTimeMillis();
-			addOrUpdateInElastic(esTests);
-			log.trace("Storing tests in Elastic took " + (System.currentTimeMillis() - currentTime + " ms"));
 
+		currentTime = System.currentTimeMillis();
+		final Set<TestNode> testsToUpdate = findTestsToUpdate(metadata.getId(), executionTests);
+		log.trace("Finding tests that are not updated in the Elastic took "
+				+ (System.currentTimeMillis() - currentTime + " ms"));
+
+		if (testsToUpdate.isEmpty()) {
+			return;
 		}
+
+		currentTime = System.currentTimeMillis();
+		List<ElasticsearchTest> esTests = convertToElasticTests(metadata, machineNode, testsToUpdate);
+		log.trace("Converting tests to Elastic took " + (System.currentTimeMillis() - currentTime + " ms"));
+
+		currentTime = System.currentTimeMillis();
+		addOrUpdateInElastic(esTests);
+		log.trace("Storing tests in Elastic took " + (System.currentTimeMillis() - currentTime + " ms"));
+
 		currentTime = System.currentTimeMillis();
 		Set<TestNode> clonedTests = cloneTests(executionTests);
 		log.trace("Clonning all the updated tests took " + (System.currentTimeMillis() - currentTime + " ms"));
-		
+
 		savedTestsPerExecution.put(metadata.getId(), clonedTests);
+	}
+
+	private Set<TestNode> findTestsToUpdate(int executionId, Set<TestNode> executionTests) {
+		if (!savedTestsPerExecution.containsKey(executionId)) {
+			// There are no tests in this execution that are already stored in
+			// the
+			// Elastic
+			return executionTests;
+		}
+
+		// Get all the tests that were saved in the Elastic
+		final Set<TestNode> updatedExecutionTests = savedTestsPerExecution.get(executionId);
+
+		// Remove the updated tests from all the tests
+		final Set<TestNode> testsToUpdate = new HashSet<TestNode>(executionTests);
+		testsToUpdate.removeAll(updatedExecutionTests);
+		return testsToUpdate;
 	}
 
 	private Set<TestNode> cloneTests(Set<TestNode> executionTests) {
