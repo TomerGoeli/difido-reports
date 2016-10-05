@@ -39,7 +39,7 @@ public class ESController {
 
 	private final Logger log = LoggerFactory.getLogger(ESController.class);
 
-	private volatile Map<Integer, Set<TestNode>> savedTestsPerExecution;
+	volatile Map<Integer, Set<TestNode>> savedTestsPerExecution;
 
 	// TODO: For testing. Of course that this should be handled differently.
 	// Probably using the application context.
@@ -104,7 +104,7 @@ public class ESController {
 		savedTestsPerExecution.put(metadata.getId(), clonedTests);
 	}
 
-	private Set<TestNode> findTestsToUpdate(int executionId, Set<TestNode> executionTests) {
+	Set<TestNode> findTestsToUpdate(int executionId, Set<TestNode> executionTests) {
 		if (!savedTestsPerExecution.containsKey(executionId)) {
 			// There are no tests in this execution that are already stored in
 			// the
@@ -121,7 +121,7 @@ public class ESController {
 		return testsToUpdate;
 	}
 
-	private Set<TestNode> cloneTests(Set<TestNode> executionTests) {
+	Set<TestNode> cloneTests(Set<TestNode> executionTests) {
 		Set<TestNode> clonedTests = new HashSet<TestNode>();
 		for (TestNode test : executionTests) {
 			clonedTests.add(new TestNode(test));
@@ -200,7 +200,7 @@ public class ESController {
 		return esTest;
 	}
 
-	private Set<TestNode> getExecutionTests(MachineNode machineNode) {
+	Set<TestNode> getExecutionTests(MachineNode machineNode) {
 		Set<TestNode> executionTests = new HashSet<TestNode>();
 		if (null == machineNode) {
 			return executionTests;
