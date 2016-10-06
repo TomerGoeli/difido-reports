@@ -23,6 +23,8 @@ import il.co.topq.difido.model.execution.Node;
 import il.co.topq.difido.model.execution.ScenarioNode;
 import il.co.topq.difido.model.execution.TestNode;
 import il.co.topq.report.Common;
+import il.co.topq.report.Configuration;
+import il.co.topq.report.Configuration.ConfigProps;
 import il.co.topq.report.business.execution.ExecutionMetadata;
 import il.co.topq.report.events.ExecutionEndedEvent;
 import il.co.topq.report.events.MachineCreatedEvent;
@@ -43,12 +45,16 @@ public class ESController {
 
 	// TODO: For testing. Of course that this should be handled differently.
 	// Probably using the application context.
-	public static boolean enabled = true;
+	public static boolean enabled;
 
-	private static boolean storeOnlyAtEnd = false;
+	private static boolean storeOnlyAtEnd;
 
 	public ESController() {
 		savedTestsPerExecution = Collections.synchronizedMap(new HashMap<Integer, Set<TestNode>>());
+		enabled = Configuration.INSTANCE.readBoolean(ConfigProps.ENABLE_ELASTIC_SEARCH);
+		log.debug("Elasticsearch is set to: enabled=" + enabled);
+		storeOnlyAtEnd = Configuration.INSTANCE.readBoolean(ConfigProps.STORE_IN_ELASTIC_ONLY_AT_EXECUTION_END);
+		log.debug("Store only at end of execution is set to: enabled=" + storeOnlyAtEnd);
 	}
 
 	@EventListener
