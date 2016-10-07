@@ -38,8 +38,6 @@ public abstract class AbstractDifidoReporter implements Reporter {
 	
 	private static final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("yyyy/MM/dd");
 
-	private static final SimpleDateFormat TIME_AND_DATE_FORMAT = new SimpleDateFormat("yyyy/MM/dd 'at' HH:mm:ss");
-
 	private Execution execution;
 
 	private ScenarioNode currentTestScenario;
@@ -167,17 +165,14 @@ public abstract class AbstractDifidoReporter implements Reporter {
 		currentTest.setTimestamp(TIME_FORMAT.format(date));
 		currentTest.setDate(DATE_FORMAT.format(date));
 		currentClassScenario.addChild(currentTest);
-		testDetails = new TestDetails(testName, currentTest.getUid());
-		testDetails.setTimeStamp(TIME_AND_DATE_FORMAT.format(date));
+		testDetails = new TestDetails(currentTest.getUid());
 		if (result.getMethod().getDescription() != null) {
-			testDetails.setDescription(result.getMethod().getDescription());
 			currentTest.setDescription(result.getMethod().getDescription());
 		}
 		addPropertyIfExist("Class", result.getTestClass().getName());
 		addPropertyIfExist("Groups", Arrays.toString(result.getMethod().getGroups()));
 		int paramCounter = 0;
 		for (String paramValue : testParameters) {
-			testDetails.addParameter("param" + paramCounter, paramValue);
 			currentTest.addParameter("param" + paramCounter++, paramValue);
 		}
 
@@ -226,7 +221,6 @@ public abstract class AbstractDifidoReporter implements Reporter {
 
 	private void addPropertyIfExist(String propertyName, String property) {
 		if (property != null) {
-			testDetails.addProperty(propertyName, property);
 			currentTest.addProperty(propertyName, property);
 		}
 	}
@@ -412,7 +406,7 @@ public abstract class AbstractDifidoReporter implements Reporter {
 		if (null == testDetails) {
 			return;
 		}
-		testDetails.addProperty(name, value);
+		currentTest.addProperty(name, value);
 	}
 
 	/**
